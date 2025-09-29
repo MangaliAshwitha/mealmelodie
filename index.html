@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MealMélodie</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-image: url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1950&q=80');
+      background-size: cover;
+      background-position: center;
+      font-family: 'Playfair Display', serif;
+      color: black;
+      margin: 0;
+      padding: 0;
+    }
+
+    .styled-text {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      letter-spacing: 2px;
+    }
+
+    .flow-tagline {
+      font-size: 2rem;
+      font-weight: bold;
+      color: black;
+      font-family: 'Dancing Script', cursive;
+      white-space: nowrap;
+      overflow: hidden;
+      display: block;
+      position: relative;
+      animation: moveLeft 12s linear infinite;
+      margin-top: 1rem;
+    }
+
+    @keyframes moveLeft {
+      0% {
+        transform: translateX(100%);
+      }
+
+      100% {
+        transform: translateX(-100%);
+      }
+    }
+
+    .button-black {
+      background-color: black;
+      color: white;
+      transition: all 0.2s;
+    }
+
+    .button-black:hover {
+      background-color: gray;
+    }
+
+    .recipe-card img {
+      border-radius: 0.5rem;
+    }
+
+    #results h3 {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="landing-screen" class="w-full h-screen flex flex-col items-center justify-center p-5 relative">
+    <div class="absolute inset-0 bg-white bg-opacity-50"></div>
+    <div class="flex flex-col items-center relative z-10">
+      <h1 class="text-8xl font-black styled-text text-center">MealMélodie</h1>
+      <p class="flow-tagline text-3xl">The melody of meals starts here.</p>
+    </div>
+    <button id="start-btn"
+      class="mt-12 px-6 py-3 rounded-full font-bold button-black shadow-lg relative z-10">Cook</button>
+  </div>
+
+  <div id="main-app" class="hidden">
+    <div class="container mx-auto p-5">
+      <header class="text-center p-4 mb-3 rounded-xl bg-white bg-opacity-70">
+        <h1 class="text-3xl font-bold mb-2">🍲 MealMélodie</h1>
+        <p class="opacity-95 text-lg">Turn your ingredients into a symphony of delicious recipes.</p>
+      </header>
+
+      <section class="my-4">
+        <div class="flex flex-col md:flex-row gap-2 items-center">
+          <input id="searchBox" type="text" placeholder="Enter ingredients (e.g. tomato, onion)"
+            class="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-600">
+          <button id="findBtn"
+            class="px-4 py-3 rounded-lg bg-black text-white font-semibold hover:bg-gray-700 transition-colors duration-200">Find
+            Recipes</button>
+        </div>
+      </section>
+
+      <main id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4" aria-live="polite"></main>
+
+      <footer class="mt-5 text-center text-gray-800 text-sm">
+        <small>Built with HTML • CSS • JavaScript — Front-end only</small>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const landingScreen = document.getElementById("landing-screen");
+      const startBtn = document.getElementById("start-btn");
+      const mainApp = document.getElementById("main-app");
+      const searchBox = document.getElementById("searchBox");
+      const findBtn = document.getElementById("findBtn");
+      const results = document.getElementById("results");
+
+      // ✅ Direct Spoonacular API Key (Updated)
+      const API_KEY = "15312cfad31f4ffdbfaccf45864a569d";
+
+      // ✅ Direct Spoonacular Base URL for Complex Search
+      const API_BASE_URL = `https://api.spoonacular.com/recipes/complexSearch`;
+
+
+      // Show main app on "Cook" click
+      startBtn.addEventListener("click", () => {
+        landingScreen.style.display = "none";
+        mainApp.classList.remove("hidden");
+      });
+
+      // Fetch recipes using Direct Spoonacular API
+      async function fetchRecipes(ingredients) {
+        try {
+          if (!ingredients) return;
+
+          results.innerHTML = "<div class='text-center p-4 text-xl text-black font-bold'>Searching for recipes... 🎶</div>";
+
+          // Using 'query' for complexSearch and adding the API Key as a query parameter
+          const url = `${API_BASE_URL}?query=${encodeURIComponent(ingredients)}&number=12&apiKey=${API_KEY}`;
+
+          const response = await fetch(url, {
+            method: "GET",
+            // Note: No X-RapidAPI-Key header is needed for this direct URL
+          });
+
+          if (!response.ok) {
+            // Provides feedback if the key is invalid or the limit is hit (401/402)
+            throw new Error(`API call failed: ${response.status} ${response.statusText}. Please check your API key's status and daily limits.`);
+          }
+
+          const data = await response.json();
+
+          // Complex Search returns results inside a 'results' array
+          renderRecipes(data.results);
+
+        } catch (error) {
+          // Display a user-friendly error message
+          results.innerHTML = `<div class='text-red-600 p-4 bg-red-100 rounded-lg'>Error fetching recipes! Details: ${error.message}</div>`;
+          console.error("Fetch Error:", error);
+        }
+      }
+
+      // Render recipe cards (Adapted for Complex Search structure)
+      function renderRecipes(recipes) {
+        results.innerHTML = "";
+        if (!recipes || recipes.length === 0) {
+          results.innerHTML = "<div class='text-center p-4 text-lg text-black'>No recipes found for your ingredients. Try different ones!</div>";
+          return;
+        }
+
+        recipes.forEach(r => {
+          const card = document.createElement("div");
+          card.className = "recipe-card bg-white bg-opacity-70 p-3 rounded-xl shadow-md";
+
+          // Note: Complex Search returns less initial data (no ingredients list/calories)
+          // We generate a link to the recipe's direct page.
+          const recipeId = r.id;
+
+          card.innerHTML = `
+                        <img src="${r.image}" class="w-full h-48 object-cover rounded-lg" alt="${r.title}"/>
+                        <h3 class="mt-2 text-lg font-bold">${r.title}</h3>
+                        <p class="mb-2">
+                            <strong>Recipe ID:</strong> ${recipeId}
+                        </p>
+                        <p class="font-semibold text-sm text-gray-700">
+                            (Search is based on: "${searchBox.value.trim()}")
+                        </p>
+                        <a href="https://spoonacular.com/recipes/${r.title.toLowerCase().replace(/\s/g, '-')}-${recipeId}" target="_blank"
+                            class="mt-2 inline-block bg-black text-white px-3 py-2 rounded hover:bg-gray-700 transition-colors">View Recipe Page</a>
+                    `;
+
+          results.appendChild(card);
+        });
+      }
+
+      // Event listeners
+      findBtn.addEventListener("click", () => {
+        const ingredients = searchBox.value.trim();
+        if (!ingredients) {
+          results.innerHTML = "<div class='text-center p-4 text-red-500'>Please enter at least one ingredient!</div>";
+          return;
+        }
+        fetchRecipes(ingredients);
+      });
+
+      searchBox.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const ingredients = searchBox.value.trim();
+          if (ingredients) fetchRecipes(ingredients);
+        }
+      });
+    });
+  </script>
+
+</body>
+
+</html>
